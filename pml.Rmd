@@ -1,0 +1,96 @@
+---
+title: "Practical Machine Learning Project"
+author: "Frank Feng"
+date: "Thursday, June 18, 2015"
+output: html_document
+---
+### Purpose:
+
+The goal of this project is to build a statistic model to predict the manner ("classe" variable in the dataset) of exercise performed by a group using the data collected from sensors attached to the individuals in the group.   
+
+### Data description
+
+The data used in this project come from  <http://groupware.les.inf.puc-rio.br/har>. 
+It contains the measurements of six young health participants performing one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). The details description of data can be found in the reference article.
+
+### Reading the data:
+After downloading the data files from the source link into a R studio work directory, importing the training and testing data files into data frames;
+```{r}
+pml_training<-read.csv("pml-training.csv",na.strings=c("NA",""))
+pml_testing<-read.csv("pml-testing.csv",na.strings=c("NA",""))
+```
+
+### Exploring and cleaning data:
+Explore the data structure,distribution, and variance: 
+```{r,results='hide',warning=FALSE,message=FALSE}
+summary(pml_training)
+#19622 obs. 160 variable
+#remove columns with NAs=19216
+pml_training <- pml_training[,colSums(is.na(pml_training))<19216]
+summary(pml_training)
+#19622 obs. 60 variables
+#check near zero variables
+library(caret)
+nearZeroVar(pml_training,saveMetrics=TRUE)
+#check predictor types and values
+str(pml_training)
+```
+From the above results of data structure, distribution summary, and variance calculations, we can see column X is a sequence number, new_window is not changing. While we are only interested to classify the manner of exercise, the individual identify and time information should not play a role in out prediction, so we can remove columns 1-6 from our training set.
+```{r}
+pml_training<- pml_training[,-(1:6)]
+dim(pml_training)
+```
+
+### Building Model 
+We can see the training data set is rather large, we will split the data set into two halves, each contains 50% of data set, one will be used for training the model, and the other will be used for cross validation and calculation of out-of-sample error. As indicated in the reference article, we will use random forest method to classify the different manner of exercise (classe), and we will use k-fold cross-validation (cv) as train control options, and we choose k=5 in order to save computer time to train the model. Here are the steps and training results:
+```{r,warning=FALSE,message=FALSE}
+set.seed(201506)
+inTrain <-createDataPartition(y=pml_training$classe,p=0.5,list=FALSE)
+trainData <-pml_training[inTrain,]
+validData <-pml_training[-inTrain,]
+# use k-fold cross-validation method in train control option
+trControl <- trainControl(method = "cv", number = 5,allowParallel=TRUE)
+# perform training using random forest method
+rfFit <- train(trainData$classe ~ ., method = "rf", trControl = trControl, data =trainData)
+#final model
+rfFit$finalModel
+# model fit accuracy
+acy<-rfFit$results$Accuracy[2]
+```
+From the training finalModel, we obtained estimated OOB ,or out of bag (sample) error is 0.3% and predication accuracy for the training set is `r acy`.
+
+### Cross-Validation and out-of-sample error
+Applying the model to the other half of the training data set we hold out to cross validate the model, we can test our prediction accuracy and calculate the out-of-sample error.
+```{r}
+# predict with the other half of the training data .
+prediction_valid<-predict(rfFit,newdata=validData)
+# over all accuracy
+oacy<-confusionMatrix(prediction_valid,validData$classe)$overall[1]
+# the out of sample error
+osmpl_err<-1-oacy
+```
+We found overall predication accuracy for the validation set is `r oacy`  which means we did not over fit or under fit the model, or the split-ed datasets are very similar.  The out-of-sample error is `r osmpl_err` which is very close to the model estimated OOB error 0.3% from the k-fold cross-validation training control, which indicates the OOB error is as accurate as out-of-sample error we calculated using a validation set of the same size as the training set used to build the model.
+
+### Test data predication
+Now we can apply our model to the testing data set and write out answers into individual files for our second part of the project. 
+```{r}
+# remove NA columns
+pml_testing<-pml_testing[,colSums(is.na(pml_testing))<20]
+# remove first six columns
+pml_testing <-pml_testing[,-(1:6)]
+# predications for test data
+answers <- predict(rfFit,newdata=pml_testing)
+answers
+#write answer to files use a function
+pml_write_files = function(x){
+     n = length(x)
+     for(i in 1:n){
+         filename = paste0("problem_id_",i,".txt")
+         write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.nam=FALSE)
+     }
+ }
+pml_write_files(answers)
+```
+
+### Reference
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
