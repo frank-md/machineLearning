@@ -14,7 +14,7 @@ The data used in this project come from  <http://groupware.les.inf.puc-rio.br/ha
 It contains the measurements of six young health participants performing one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). The details description of data can be found in the reference article.
 
 ### Reading the data:
-After downloading the data files from the source link into a R studio work directory, importing the training and testing data files into data frames;
+After downloading the data files from the project source links into a R studio work directory, importing the training and testing data files into data frames;
 ```{r}
 pml_training<-read.csv("pml-training.csv",na.strings=c("NA",""))
 pml_testing<-read.csv("pml-testing.csv",na.strings=c("NA",""))
@@ -44,7 +44,7 @@ library(caret)
 nzvdf<-nearZeroVar(pml_training,saveMetrics=TRUE)
 ```
 ```{r}
-# show the varibales with zero variance
+# show the varibales with near zero variance
 nzvdf[nzvdf$nzv==TRUE,]
 #check a sample of variable types and values
 str(pml_training[,1:12])
@@ -53,10 +53,11 @@ From the above results of data structure, distribution summary, and variance cal
 ```{r}
 pml_training<- pml_training[,-(1:6)]
 dim(pml_training)
+table(pml_training$classe)
 ```
 
 ### Building Model 
-We can see the training data set is rather large, we will split the data set into two halves, each contains 50% of data set, one will be used for training the model, and the other will be used for cross validation and calculation of out-of-sample error. As indicated in the reference article, we will use random forest method to classify the different manner of exercise (classe), and we will use k-fold cross-validation (cv) as train control options, and we choose k=5 in order to save computer time to train the model. Here are the steps and training results:
+We can see the training data set is rather large, we will split the data set into two halves, each contains 50% of data set, one will be used for training the model, and the other will be used for cross validation and calculation of out-of-sample error. As indicated in the reference article, we will use random forest method to classify the different manner of exercise (classe), and we will use k-fold cross-validation (cv) as train control options to minimize in-sample errors, and we choose k=5 in order to save computer time to train the model. Here are the steps and training results:
 ```{r,warning=FALSE,message=FALSE}
 set.seed(201506)
 inTrain <-createDataPartition(y=pml_training$classe,p=0.5,list=FALSE)
@@ -72,6 +73,10 @@ rfFit$finalModel
 acy<-rfFit$results$Accuracy[2]
 ```
 From the training finalModel, we obtained estimated OOB ,or out of bag (sample) error is 0.3% and predication accuracy for the training set is `r acy`.
+The plots below shows the out of bag error rate for each classes vs number of trees. the black solid line in the middle is the overall out of bag error.
+```{r}
+plot(rfFit$finalModel)
+```
 
 ### Cross-Validation and out-of-sample error
 Applying the model to the other half of the training data set we hold out to cross validate the model, we can test our prediction accuracy and calculate the out-of-sample error.
