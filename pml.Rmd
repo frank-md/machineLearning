@@ -1,6 +1,6 @@
 ---
 title: "Practical Machine Learning Project"
-author: "Frank Feng"
+author: "Frank F."
 date: "Thursday, June 18, 2015"
 output: html_document
 ---
@@ -21,21 +21,35 @@ pml_testing<-read.csv("pml-testing.csv",na.strings=c("NA",""))
 ```
 
 ### Exploring and cleaning data:
-Explore the data structure,distribution, and variance: 
+Take a look of summary of the data:
 ```{r,results='hide',warning=FALSE,message=FALSE}
 summary(pml_training)
-#19622 obs. 160 variable
-#remove columns with NAs=19216
-pml_training <- pml_training[,colSums(is.na(pml_training))<19216]
-summary(pml_training)
-#19622 obs. 60 variables
-#check near zero variables
-library(caret)
-nearZeroVar(pml_training,saveMetrics=TRUE)
-#check predictor types and values
-str(pml_training)
 ```
-From the above results of data structure, distribution summary, and variance calculations, we can see column X is a sequence number, new_window is not changing. While we are only interested to classify the manner of exercise, the individual identify and time information should not play a role in out prediction, so we can remove columns 1-6 from our training set.
+Remove variables with most of observations are NAs:
+```{r}
+dim(pml_training)
+#count NAs
+nacount<-sapply(pml_training,function(x) sum(is.na(x)))
+#plot distribution
+hist(nacount,main="Variable NA Distribution")
+#find the most NA count value in the histogram
+varnas <- max(nacount)
+#remove columns with most of NAs
+pml_training <- pml_training[,colSums(is.na(pml_training))<varnas]
+dim(pml_training)
+```
+Finding the zero variance variables:
+```{r,results='hide',warning=FALSE,message=FALSE}
+library(caret)
+nzvdf<-nearZeroVar(pml_training,saveMetrics=TRUE)
+```
+```{r}
+# show the varibales with zero variance
+nzvdf[nzvdf$nzv==TRUE,]
+#check a sample of variable types and values
+str(pml_training[,1:12])
+```
+From the above results of data structure, distribution summary, and variance calculations, we can see column X is a sequence number, new_window is not changing. While we are only interested to classify the manner of exercise, the individual identity and time information should not play a role in our prediction, so we can remove columns 1-6 from our training set.
 ```{r}
 pml_training<- pml_training[,-(1:6)]
 dim(pml_training)
