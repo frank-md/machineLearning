@@ -4,7 +4,7 @@ author: "Frank F."
 date: "Thursday, June 18, 2015"
 output: html_document
 ---
-### Purpose:
+### Purpose
 
 The goal of this project is to build a statistic model to predict the manner ("classe" variable in the dataset) of exercise performed by a group using the data collected from sensors attached to the individuals in the group.   
 
@@ -13,14 +13,14 @@ The goal of this project is to build a statistic model to predict the manner ("c
 The data used in this project come from  <http://groupware.les.inf.puc-rio.br/har>. 
 It contains the measurements of six young health participants performing one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). The details description of data can be found in the reference article.
 
-### Reading the data:
-After downloading the data files from the project source links into a R studio work directory, importing the training and testing data files into data frames;
+### Reading the data
+After downloading the data files from the project source links into a R studio work directory, importing the training and testing data files into data frames:
 ```{r}
 pml_training<-read.csv("pml-training.csv",na.strings=c("NA",""))
 pml_testing<-read.csv("pml-testing.csv",na.strings=c("NA",""))
 ```
 
-### Exploring and cleaning data:
+### Exploring and cleaning data
 Take a look of summary of the data:
 ```{r,results='hide',warning=FALSE,message=FALSE}
 summary(pml_training)
@@ -30,7 +30,7 @@ Remove variables with most of observations are NAs:
 dim(pml_training)
 #count NAs
 nacount<-sapply(pml_training,function(x) sum(is.na(x)))
-#plot distribution
+#plot the NAs distribution
 hist(nacount,main="Variable NA Distribution")
 #find the most NA count value in the histogram
 varnas <- max(nacount)
@@ -38,7 +38,7 @@ varnas <- max(nacount)
 pml_training <- pml_training[,colSums(is.na(pml_training))<varnas]
 dim(pml_training)
 ```
-Finding the zero variance variables:
+Finding the near zero variance variables:
 ```{r,results='hide',warning=FALSE,message=FALSE}
 library(caret)
 nzvdf<-nearZeroVar(pml_training,saveMetrics=TRUE)
@@ -49,7 +49,7 @@ nzvdf[nzvdf$nzv==TRUE,]
 #check a sample of variable types and values
 str(pml_training[,1:12])
 ```
-From the above results of data structure, distribution summary, and variance calculations, we can see column X is a sequence number, new_window is not changing. While we are only interested to classify the manner of exercise, the individual identity and time information should not play a role in our prediction, so we can remove columns 1-6 from our training set.
+From the above results of data structure, distribution summary, and variance calculations, we can see column X is a sequence number, new_window has near zero variance. While we are only interested to classify the manner of exercise, the individual identity and time information should not play a role in our prediction, so we can remove columns 1-6 from our training set.
 ```{r}
 pml_training<- pml_training[,-(1:6)]
 dim(pml_training)
@@ -73,7 +73,7 @@ rfFit$finalModel
 acy<-rfFit$results$Accuracy[2]
 ```
 From the training finalModel, we obtained estimated OOB ,or out of bag (sample) error is 0.3% and predication accuracy for the training set is `r acy`.
-The plots below shows the out of bag error rate for each classes vs number of trees. the black solid line in the middle is the overall out of bag error.
+The plots below shows the out of bag error rate for each classes vs trees. the black solid line in the middle is the overall out of bag error.
 ```{r}
 plot(rfFit$finalModel)
 ```
